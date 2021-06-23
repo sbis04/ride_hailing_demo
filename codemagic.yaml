@@ -33,6 +33,7 @@ workflows:
 
   passengers-app-workflow:
     name: Passengers app workflow
+    working_directory: passengers_app
     instance_type: mac_pro
     max_build_duration: 60
     environment:
@@ -40,32 +41,23 @@ workflows:
       xcode: latest
       cocoapods: default
     scripts:
-      - |
-        # set up debug keystore
-        rm -f ~/.android/debug.keystore
-        keytool -genkeypair \
-          -alias androiddebugkey \
-          -keypass android \
-          -keystore ~/.android/debug.keystore \
-          -storepass android \
-          -dname 'CN=Android Debug,O=Android,C=US' \
-          -keyalg 'RSA' \
-          -keysize 2048 \
-          -validity 10000
-      - |
-        # set up local properties
-        echo "flutter.sdk=$HOME/programs/flutter" > "$FCI_BUILD_DIR/passengers_app/android/local.properties"
-      - cd passengers_app && flutter packages pub get
-      - cd passengers_app && flutter build apk --debug
-      - find . -name "Podfile" -execdir pod install \;
-      - cd passengers_app && flutter build ios --debug --no-codesign
+      - name: Set up local properties
+        script: |
+          echo "flutter.sdk=$HOME/programs/flutter" > "$FCI_BUILD_DIR/drivers_app/android/local.properties"
+
+      - name: Get Flutter packages
+        script: flutter packages pub get
+
+      - name: Build Android app
+        script: flutter build apk --debug
+
+      - name: Build iOS app
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+          flutter build ios --debug --no-codesign
     artifacts:
-      - passengers_app/build/**/outputs/**/*.apk
-      - passengers_app/build/**/outputs/**/*.aab
-      - passengers_app/build/**/outputs/**/mapping.txt
-      - passengers_app/build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
-      - passengers_app/flutter_drive.log
+      - build/**/outputs/**/*.apk
+      - build/ios/ipa/*.ipa
     publishing:
       email:
         recipients:
