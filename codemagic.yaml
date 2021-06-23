@@ -1,9 +1,7 @@
-# Automatically generated on 2021-06-23 UTC from https://codemagic.io/app/60d2bf49ab516398f3e9d9b1/settings
-# Note that this configuration is not an exact match to UI settings. Review and adjust as necessary.
-
 workflows:
   drivers-app-workflow:
     name: Drivers app workflow
+    working_directory: drivers_app
     instance_type: mac_pro
     max_build_duration: 60
     environment:
@@ -11,25 +9,34 @@ workflows:
       xcode: latest
       cocoapods: default
     scripts:
-      - |
-        # set up debug keystore
-        rm -f ~/.android/debug.keystore
-        keytool -genkeypair \
-          -alias androiddebugkey \
-          -keypass android \
-          -keystore ~/.android/debug.keystore \
-          -storepass android \
-          -dname 'CN=Android Debug,O=Android,C=US' \
-          -keyalg 'RSA' \
-          -keysize 2048 \
-          -validity 10000
-      - |
-        # set up local properties
-        echo "flutter.sdk=$HOME/programs/flutter" > "$FCI_BUILD_DIR/drivers_app/android/local.properties"
-      - cd drivers_app && flutter packages pub get
-      - cd drivers_app && flutter build apk --debug
-      - find . -name "Podfile" -execdir pod install \;
-      - cd drivers_app && flutter build ios --debug --no-codesign
+      - name: Set up debug keystore
+        script: |
+          rm -f ~/.android/debug.keystore
+          keytool -genkeypair \
+            -alias androiddebugkey \
+            -keypass android \
+            -keystore ~/.android/debug.keystore \
+            -storepass android \
+            -dname 'CN=Android Debug,O=Android,C=US' \
+            -keyalg 'RSA' \
+            -keysize 2048 \
+            -validity 10000
+
+      - name: Set up local properties
+        script: |
+          echo "flutter.sdk=$HOME/programs/flutter" > "$FCI_BUILD_DIR/drivers_app/android/local.properties"
+
+      - name: Get Flutter packages
+        script: flutter packages pub get
+
+      - name: Build Android app
+        script: flutter build apk --debug
+
+      - name: Build iOS app
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+          flutter build ios --debug --no-codesign
+
     artifacts:
       - drivers_app/build/**/outputs/**/*.apk
       - drivers_app/build/**/outputs/**/*.aab
@@ -37,10 +44,12 @@ workflows:
       - drivers_app/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
       - drivers_app/flutter_drive.log
+
     publishing:
       email:
         recipients:
           - sbis1999@gmail.com
+
   passengers-app-workflow:
     name: Passengers app workflow
     instance_type: mac_pro
